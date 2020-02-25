@@ -1,0 +1,106 @@
+pub fn syscall0(number: usize) usize {
+    return asm volatile ("syscall"
+        : [ret] "={rax}" (-> usize)
+        : [number] "{rax}" (number)
+        : "rcx", "r11", "memory"
+    );
+}
+
+pub fn syscall1(number: usize, arg1: usize) usize {
+    return asm volatile ("syscall"
+        : [ret] "={rax}" (-> usize)
+        : [number] "{rax}" (number),
+          [arg1] "{rdi}" (arg1)
+        : "rcx", "r11", "memory"
+    );
+}
+
+pub fn syscall2(number: usize, arg1: usize, arg2: usize) usize {
+    return asm volatile ("syscall"
+        : [ret] "={rax}" (-> usize)
+        : [number] "{rax}" (number),
+          [arg1] "{rdi}" (arg1),
+          [arg2] "{rsi}" (arg2)
+        : "rcx", "r11", "memory"
+    );
+}
+
+pub fn syscall3(number: usize, arg1: usize, arg2: usize, arg3: usize) usize {
+    return asm volatile ("syscall"
+        : [ret] "={rax}" (-> usize)
+        : [number] "{rax}" (number),
+          [arg1] "{rdi}" (arg1),
+          [arg2] "{rsi}" (arg2),
+          [arg3] "{rdx}" (arg3)
+        : "rcx", "r11", "memory"
+    );
+}
+
+pub fn syscall5(number: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize, arg5: usize) usize {
+    return asm volatile ("syscall"
+        : [ret] "={rax}" (-> usize)
+        : [number] "{rax}" (number),
+          [arg1] "{rdi}" (arg1),
+          [arg2] "{rsi}" (arg2),
+          [arg3] "{rdx}" (arg3),
+          [arg4] "{r10}" (arg4),
+          [arg5] "{r8}" (arg5)
+        : "rcx", "r11", "memory"
+    );
+}
+
+pub fn syscall6(
+    number: usize,
+    arg1: usize,
+    arg2: usize,
+    arg3: usize,
+    arg4: usize,
+    arg5: usize,
+    arg6: usize,
+) usize {
+    return asm volatile ("syscall"
+        : [ret] "={rax}" (-> usize)
+        : [number] "{rax}" (number),
+          [arg1] "{rdi}" (arg1),
+          [arg2] "{rsi}" (arg2),
+          [arg3] "{rdx}" (arg3),
+          [arg4] "{r10}" (arg4),
+          [arg5] "{r8}" (arg5),
+          [arg6] "{r9}" (arg6)
+        : "rcx", "r11", "memory"
+    );
+}
+
+pub fn exit(code: usize) noreturn {
+    _ = syscall1(0x80000002, code);
+    unreachable;
+}
+
+const SyscallResult = extern struct {
+    value: u64,
+    err: i32,
+};
+
+pub fn openWindow(w: usize, h: usize, x: usize, y: usize, title: [*:0]const u8) SyscallResult {
+    return SyscallResult{
+        .value = syscall5(0x8000_0003, w, h, x, y, @ptrToInt(title)),
+        .err = 0,
+    };
+}
+
+pub fn putString(wh: u64, x: usize, y: usize, color: u32, str: [*:0]const u8) SyscallResult {
+    return SyscallResult {
+        .value = syscall5(0x8000_0004, wh, x, y, color, @ptrToInt(str)),
+        .err = 0,
+    };
+}
+
+fn _main(c_argc: i32, c_argv: [*][*:0]u8) callconv(.C) noreturn {
+    const wh = openWindow(300, 100, 0, 0, "ZenMikan");
+    _ = putString(wh.value, 4, 28, 0xff0000, "hello from Zen");
+    exit(0x00);
+}
+
+comptime {
+    @export(_main, .{ .name = "main", .linkage = .Strong });
+}

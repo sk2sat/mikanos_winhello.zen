@@ -1,0 +1,25 @@
+const std = @import("std");
+const Target = std.Target;
+const Builder = @import("std").build.Builder;
+
+pub fn build(b: *Builder) !void {
+    const mode = b.standardReleaseOptions();
+    const target = try Target.parse("x86_64-freestanding-gnu");
+    const obj = b.addObject("mikanos_app", "src/main.zen");
+    obj.setTheTarget(target);
+    obj.setOutputDir("zen-cache");
+    obj.setMCModel(.Large);
+    obj.setBuildMode(mode);
+
+    const gen_app = b.addSystemCommand(&[_][]const u8{
+        "ld.lld",
+        "--entry", "main",
+        "-z", "norelro",
+        "--image-base", "0xffff800000000000",
+        "--static", obj.getOutputPath(),
+        "-o", "zen-cache/winhello",
+    });
+
+    gen_app.step.dependOn(&obj.step);
+    b.default_step.dependOn(&gen_app.step);
+}
